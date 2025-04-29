@@ -5,15 +5,20 @@ import papaparse from 'https://jslib.k6.io/papaparse/5.1.1/index.js';
 // Load addresses from CSV
 const csvData = open('top_addresses_by_transaction_count.csv');
 const parsedCSV = papaparse.parse(csvData, { header: true }).data;
-const addresses = parsedCSV.map(row => row['address']);
+const addresses = parsedCSV.map(row => row['address']).filter(Boolean);
+
+if (!addresses.length) {
+    throw new Error("❌ No addresses loaded from CSV. Please check your input file.");
+}
 
 // Load SQL template
 const sqlTemplate = open('query_template.sql');
 
+// Configurable options via env vars
 export let options = {
-    vus: 50,
-    duration: '1m',
-    rps: 200,
+    vus: __ENV.VUS ? parseInt(__ENV.VUS) : 50,
+    duration: __ENV.DURATION || '1m',
+    rps: __ENV.RPS ? parseInt(__ENV.RPS) : 200,
 };
 
 function getRandomInt(min, max) {
@@ -27,7 +32,6 @@ function buildQuery() {
     const endTime = startTime + getRandomInt(0, 12 * 60 * 60 * 1000);
 
     let query = sqlTemplate;
-
     query = query.replace(/%\(address\)s/g, randomAddress);
     query = query.replace(/%\(start_ms\)s/g, startTime.toString());
     query = query.replace(/%\(end_ms\)s/g, endTime.toString());
@@ -36,31 +40,34 @@ function buildQuery() {
     return query;
 }
 
-
-// Runs once, before the load test
-export function setup() {
-    const firstQuery = buildQuery();
-    console.log('First dynamically built SQL query (during setup):');
-    console.log(firstQuery);
-    // Pass it into the main test if you want
-    return { firstQuery: firstQuery };
-}
-
-export default function (data) {
-    const query = buildQuery();  // or reuse data.firstQuery if needed
-
-    const payload = JSON.stringify({ sql: query });
-
-    const headers = {
-        'Authorization': '<insert token here>',
+function getHeaders() {
+    return {
+        'Authorization': __ENV.AUTH || 'Bearer st-o5jhxqCo5Oqd2kXy-QECPeZgzIa62aLVp8v4S9pND7RnSgJvB',
         'Content-Type': 'application/json',
         'Connection': 'keep-alive',
     };
+}
 
-    const res = http.post('<insert controller url here>/sql', payload, { headers: headers });
+export function setup() {
+    const firstQuery = buildQuery();
+    console.log(`\n🚀 Pinot Load Test Starting`);
+    console.log(`🔢 VUs: ${options.vus}`);
+    console.log(`⏱️ Duration: ${options.duration}`);
+    console.log(`🎯 RPS: ${options.rps}`);
+    console.log(`📍 Endpoint: ${__ENV.HOST || 'https://pinot.txu6se.cp.s7e.startree.cloud'}`);
+    console.log(`\n🧪 First generated query:\n${firstQuery}\n`);
+    return {}; // could pass data if needed
+}
+
+export default function () {
+    const query = buildQuery();
+    const payload = JSON.stringify({ sql: query });
+    const headers = getHeaders();
+
+    const res = http.post(__ENV.HOST || 'https://pinot.txu6se.cp.s7e.startree.cloud/sql', payload, { headers });
 
     check(res, {
-        'status is 200': (r) => r.status === 200,
+        '✅ status is 200': (r) => r.status === 200,
     });
 
     sleep(0.1);
