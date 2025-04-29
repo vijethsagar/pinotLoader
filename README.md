@@ -18,3 +18,6 @@ top_addresses_by_transaction_count.csv
 
 query_template.sql
 
+# Run
+
+k6 run pinot_load_test.js   
