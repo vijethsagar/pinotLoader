@@ -1,9 +1,13 @@
 # pinotLoader
 
 brew install k6
+
 or
+
 choco install k6
+
 or
+
 sudo apt install k6
 
 
