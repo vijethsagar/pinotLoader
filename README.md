@@ -10,6 +10,7 @@ or
 
 sudo apt install k6
 
+#
 
 You’ll need two helper files:
 
