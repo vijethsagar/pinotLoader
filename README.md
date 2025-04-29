@@ -1,4 +1,6 @@
-# pinotLoader
+# pinotLoader 
+
+# Install
 
 brew install k6
 
@@ -10,7 +12,7 @@ or
 
 sudo apt install k6
 
-#
+# Collateral
 
 You’ll need two helper files:
 
